@@ -25,7 +25,6 @@
     /* ==================== RESET ==================== */
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     html {
-      scroll-snap-type: y proximity;
       scroll-behavior: smooth;
       font-size: 16px;
     }
@@ -197,10 +196,8 @@
     /* ==================== HERO ==================== */
     #hero {
       position: relative;
-      min-height: 100dvh;
-      min-height: max(100dvh, 600px);
-      scroll-snap-align: start;
-      scroll-snap-stop: always;
+      height: 100dvh;
+      min-height: 600px;
       overflow: hidden;
       display: flex;
       align-items: center;
@@ -444,8 +441,6 @@
 
     /* ==================== SECTION BASE ==================== */
     .section {
-      scroll-snap-align: start;
-      scroll-snap-stop: always;
       min-height: 100vh;
       position: relative;
       overflow: hidden;
@@ -1124,6 +1119,13 @@
       footer { padding: 1.2rem; }
       .menu-col { padding: 1.1rem; }
       .sides-card { padding: 1rem 1.1rem; }
+    }
+
+    /* ==================== SCROLL SNAP (touch only) ==================== */
+    /* Desktop mouse wheels fight scroll-snap-stop:always — restrict to touch */
+    @media (hover: none) and (pointer: coarse) {
+      html { scroll-snap-type: y proximity; }
+      #hero, .section { scroll-snap-align: start; scroll-snap-stop: always; }
     }
 
     /* ==================== CURSOR FOOD PREVIEW ==================== */
