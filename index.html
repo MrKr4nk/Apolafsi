@@ -1126,6 +1126,41 @@
       .sides-card { padding: 1rem 1.1rem; }
     }
 
+    /* ==================== CURSOR FOOD PREVIEW ==================== */
+    .cursor-preview {
+      position: fixed;
+      z-index: 800;
+      pointer-events: none;
+      width: 240px;
+      border-radius: 18px;
+      overflow: hidden;
+      opacity: 0;
+      top: 0; left: 0;
+      box-shadow:
+        0 24px 60px rgba(0,0,0,.55),
+        0 0 0 1.5px rgba(242,200,76,.18);
+      will-change: transform, opacity;
+      transition: opacity .22s ease, box-shadow .22s ease;
+      transform-origin: center center;
+      perspective: 600px;
+    }
+    .cursor-preview.active {
+      opacity: 1;
+      box-shadow:
+        0 28px 70px rgba(0,0,0,.65),
+        0 0 0 2px rgba(242,200,76,.5),
+        0 0 50px rgba(226,42,43,.22);
+    }
+    .cursor-preview img {
+      width: 100%;
+      height: auto;
+      display: block;
+      pointer-events: none;
+      user-select: none;
+    }
+    /* Cursor turns into crosshair over trigger areas */
+    #triggerSpecial, #triggerBurger { cursor: crosshair; }
+
     /* ==================== REDUCED MOTION ==================== */
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
@@ -1265,7 +1300,7 @@
   <div class="menu-board">
 
     <!-- ★ Special "Απολαυση" — Crown Jewel ★ -->
-    <div class="menu-special-card reveal">
+    <div class="menu-special-card reveal" id="triggerSpecial">
       <div class="special-inner-glow"></div>
       <div class="special-badge-tag">
         <span class="star-spin">★</span>
@@ -1347,7 +1382,7 @@
             <div class="menu-row-dots"></div>
             <span class="menu-row-price price-pop">2.50€</span>
           </div>
-          <div class="menu-row">
+          <div class="menu-row" id="triggerBurger">
             <span class="menu-row-name" data-i18n="i_special_burger">Special Burger</span>
             <div class="menu-row-dots"></div>
             <span class="menu-row-price price-pop">5.00€</span>
@@ -1535,6 +1570,11 @@
     2386 023 155
   </a>
 </footer>
+
+<!-- ══ CURSOR FOOD PREVIEW ══ -->
+<div id="cursorPreview" class="cursor-preview" aria-hidden="true">
+  <img id="cursorPreviewImg" src="" alt="" draggable="false">
+</div>
 
 <!-- ══ JAVASCRIPT ══ -->
 <script>
@@ -1861,6 +1901,97 @@ navSections.forEach(id => { const el = document.getElementById(id); if (el) acti
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
+})();
+
+/* ─── CURSOR FOOD PREVIEW ─── */
+(function () {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const preview   = document.getElementById('cursorPreview');
+  const previewImg = document.getElementById('cursorPreviewImg');
+  if (!preview || !previewImg) return;
+
+  const LERP      = 0.10;   /* chase speed — lower = dreamier lag */
+  const TILT_MAX  = 10;     /* max tilt degrees */
+  const OFFSET_X  = 28;     /* px right of cursor */
+  const OFFSET_Y  = -20;    /* px above cursor */
+
+  let active      = false;
+  let rafId       = null;
+  let curX = 0, curY = 0;   /* raw cursor */
+  let lerpX = 0, lerpY = 0; /* smoothed position */
+  let prevCurX = 0, prevCurY = 0;
+  let velX = 0, velY = 0;   /* smoothed velocity */
+  let tiltY = 0, tiltX = 0; /* current tilt angles */
+  let entryScale = 0.86;    /* animated in from smaller */
+
+  document.addEventListener('mousemove', e => {
+    prevCurX = curX;
+    prevCurY = curY;
+    curX = e.clientX + OFFSET_X;
+    curY = e.clientY + OFFSET_Y;
+  }, { passive: true });
+
+  function tick() {
+    if (!active) { rafId = null; return; }
+
+    /* Lerp position */
+    lerpX += (curX - lerpX) * LERP;
+    lerpY += (curY - lerpY) * LERP;
+
+    /* Velocity for tilt (smoothed) */
+    const rawVX = curX - prevCurX;
+    const rawVY = curY - prevCurY;
+    velX += (rawVX - velX) * 0.25;
+    velY += (rawVY - velY) * 0.25;
+
+    /* Tilt decays toward 0 when cursor stops */
+    const targetTiltY = Math.max(-TILT_MAX, Math.min(TILT_MAX, velX * 0.5));
+    const targetTiltX = Math.max(-TILT_MAX / 2, Math.min(TILT_MAX / 2, velY * -0.3));
+    tiltY += (targetTiltY - tiltY) * 0.18;
+    tiltX += (targetTiltX - tiltX) * 0.18;
+
+    /* Entry scale spring */
+    entryScale += (1 - entryScale) * 0.14;
+
+    preview.style.transform =
+      `translate(${lerpX}px, ${lerpY}px) ` +
+      `rotateY(${tiltY}deg) rotateX(${tiltX}deg) ` +
+      `scale(${entryScale})`;
+
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function show(imgSrc) {
+    previewImg.src = imgSrc;
+    /* Snap lerp position to cursor immediately so it doesn't fly from (0,0) */
+    lerpX = curX;
+    lerpY = curY;
+    entryScale = 0.86;
+    velX = 0; velY = 0;
+    tiltX = 0; tiltY = 0;
+    active = true;
+    preview.classList.add('active');
+    if (!rafId) rafId = requestAnimationFrame(tick);
+  }
+
+  function hide() {
+    active = false;
+    preview.classList.remove('active');
+  }
+
+  /* Bind triggers */
+  const triggerSpecial = document.getElementById('triggerSpecial');
+  const triggerBurger  = document.getElementById('triggerBurger');
+
+  if (triggerSpecial) {
+    triggerSpecial.addEventListener('mouseenter', () => show('files/Special.png'));
+    triggerSpecial.addEventListener('mouseleave', hide);
+  }
+  if (triggerBurger) {
+    triggerBurger.addEventListener('mouseenter', () => show('files/Burger.png'));
+    triggerBurger.addEventListener('mouseleave', hide);
+  }
 })();
 </script>
 </body>
