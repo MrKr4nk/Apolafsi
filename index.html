@@ -1144,7 +1144,6 @@
       will-change: transform, opacity;
       transition: opacity .22s ease, box-shadow .22s ease;
       transform-origin: center center;
-      perspective: 600px;
     }
     .cursor-preview.active {
       opacity: 1;
@@ -1958,7 +1957,7 @@ navSections.forEach(id => { const el = document.getElementById(id); if (el) acti
 
     preview.style.transform =
       `translate(${lerpX}px, ${lerpY}px) ` +
-      `rotateY(${tiltY}deg) rotateX(${tiltX}deg) ` +
+      `perspective(600px) rotateY(${tiltY}deg) rotateX(${tiltX}deg) ` +
       `scale(${entryScale})`;
 
     rafId = requestAnimationFrame(tick);
@@ -1987,11 +1986,19 @@ navSections.forEach(id => { const el = document.getElementById(id); if (el) acti
   const triggerBurger  = document.getElementById('triggerBurger');
 
   if (triggerSpecial) {
-    triggerSpecial.addEventListener('mouseenter', () => show('files/Special.png'));
+    triggerSpecial.addEventListener('mouseenter', e => {
+      curX = e.clientX + OFFSET_X; curY = e.clientY + OFFSET_Y;
+      prevCurX = curX; prevCurY = curY;
+      show('files/Special.png');
+    });
     triggerSpecial.addEventListener('mouseleave', hide);
   }
   if (triggerBurger) {
-    triggerBurger.addEventListener('mouseenter', () => show('files/Burger.png'));
+    triggerBurger.addEventListener('mouseenter', e => {
+      curX = e.clientX + OFFSET_X; curY = e.clientY + OFFSET_Y;
+      prevCurX = curX; prevCurY = curY;
+      show('files/Burger.png');
+    });
     triggerBurger.addEventListener('mouseleave', hide);
   }
 })();
